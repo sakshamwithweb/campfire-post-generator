@@ -1,17 +1,42 @@
 from langchain.tools import tool
 import requests
 import datetime
+import os
+import tempfile
+import yt_dlp
 
-@tool
-def get_time():
-    """Get current time in this format: hh:mm:ss"""
-    time = datetime.datetime.now()
-    return f"{time.hour}:{time.minute}:{time.second}"
+# 'format': 'bestvideo+bestaudio/best'
 
-@tool
-def product_listed_length():
-    """Number of products listed on user's site"""
-    req = requests.get("https://fakestoreapi.com/products")
-    return len(req.json())
 
-tools = [get_time,product_listed_length]
+@tool("video_finder", description="Takes list of dicts, with properties as 'query' needed and 'description' for accurate search in YouTube and returns videos' url")
+def video_finder_agent(promptsDict):
+    req = requests.get(
+        f"https://serpapi.com/search.json?engine=youtube&search_query=visisphere&api_key={os.getenv('SERPAPI_APIKEY')}")
+
+    youtube_results = req.json()
+    videos = youtube_results["video_results"]
+    # IN FUTURE YOU MAY WANNA DO SORT 'videos' WITH VECTOR SEARCH PROBABLITY
+    with tempfile.TemporaryDirectory() as tmpDir:
+        for index, video in enumerate(videos):
+            # print(f"checked video: {video}")
+            # Download video
+            url = "https://www.youtube.com/watch?v=HdnRIHhR5l8"
+            # , 'paths': {'home':tmpDir}
+            yt_dlp_opts = {
+                'merge_output_format': 'mp4',
+                "outtmpl": f"{tmpDir}/{index}"
+            }
+            yt_dlp.YoutubeDL(yt_dlp_opts).download(url)
+            print(os.listdir(tmpDir))
+
+        # Extract all infos from video like img, audio and everything and convert into text like transcribe, visual explain etc etc
+
+        
+        # Make a vector embedding and search your text.
+        # wherever you get, send all infos and time and break the loop.
+        # print(f"Checked video: {video}", "\n\n")
+
+    return ["https://www.myproxyforyoutube.com/x589Ds"]
+
+
+tools = [video_finder_agent]
