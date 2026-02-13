@@ -7,8 +7,8 @@ import os
 load_dotenv()
 
 # variables
-video_api = os.getenv("MEMORIESAI_API")
-idea = '''Winter Soldier vs. Cap fight scene. Caption: "When your bestie signs up for Campfire without telling you."'''
+# video_api = os.getenv("MEMORIESAI_API")
+# idea = '''Winter Soldier vs. Cap fight scene. Caption: "When your bestie signs up for Campfire without telling you."'''
 
 agent = init_agent("You only do what is said", tools)
 
