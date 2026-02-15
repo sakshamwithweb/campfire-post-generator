@@ -10,11 +10,32 @@ import base64
 import time
 
 
-def video_caption_generator(prev_frame_caption, base64_str):
+def video_caption_generator(last_caption, idx, base64_str):
     headers = {
         "Authorization": f"Bearer {os.getenv('HACKCLUB_AI_API')}",
         "Content-Type": "application/json"
     }
+
+    prompt = f"""
+You are analyzing a video at 1 frame per second.
+
+Context:
+- This frame occurs at second {idx} of the video.
+- Description of the previous frame (1 second earlier): {last_caption}
+
+Task:
+Carefully analyze the current frame and describe what is happening.
+
+Instructions:
+1. Focus only on what is visually observable in the current frame.
+2. Maintain continuity with the previous frame description.
+3. Mention changes, motion progression, new objects, or shifts in scene.
+4. Be precise and structured.
+5. Do NOT hallucinate details that are not visible.
+
+Output:
+A clear, concise explanation of the current frame that logically connects with the previous one.
+"""
 
     payload = {
         "model": "google/gemini-2.5-flash-image",
@@ -22,7 +43,7 @@ def video_caption_generator(prev_frame_caption, base64_str):
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "What is this image?"},
+                    {"type": "text", "text": prompt},
                     {
                         "type": "image_url",
                         "image_url": {"url": base64_str}
@@ -74,33 +95,33 @@ def video_finder_agent(promptsDict):
             # Video: capture and explain 1 frame per second of video
             cap = cv2.VideoCapture(videoPathFileName)
             fps = cap.get(cv2.CAP_PROP_FPS)
-
             idx = 0
             frame_count = 0
-
-            prev_frame_caption = ""
+            captions = []
             while True:
                 success, frame = cap.read()
                 if not success:
                     break
 
-                # Here we want per second
                 if (frame_count % fps == 0):
                     encode_params = [int(cv2.IMWRITE_PNG_COMPRESSION), 9]
                     _, buffer = cv2.imencode('.png', frame, encode_params)
                     b64_bytearr = base64.b64encode(buffer).decode("utf-8")
                     base64_str = f"data:image/png;base64,{b64_bytearr}"
-                    # with open(f"tmp/{idx}.txt", "w") as f:
-                    #     f.write(base64_str)
 
-                    exp = video_caption_generator(prev_frame_caption, base64_str)
-
-                    # process here
+                    last_caption = captions[-1] if len(captions) > 0 else ""
+                    exp = video_caption_generator(
+                        last_caption, idx, base64_str)
+                    captions.append(exp)
+                    print(f"{idx} done")
                     idx += 1
 
                 frame_count += 1
-
             cap.release()
+            
+            print(captions)
+            # with open("a.json","w") as f:
+            #     f.write(captions)
 
             # Audio: transcribe audio and tell
 
