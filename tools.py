@@ -9,6 +9,7 @@ import numpy as np
 import base64
 import time
 import json
+import prompts
 
 
 def video_caption_generator(last_caption, idx, base64_str):
@@ -17,28 +18,7 @@ def video_caption_generator(last_caption, idx, base64_str):
         "Content-Type": "application/json"
     }
 
-    prompt = f"""
-You are analyzing a video at 1 frame per second.
-
-Context:
-- This frame occurs at second {idx} of the video.
-- Description of the previous frame (1 second earlier): {last_caption}
-
-Task:
-Carefully analyze the current frame and describe what is happening.
-
-Instructions:
-1. Focus only on what is visually observable in the current frame.
-2. Maintain continuity with the previous frame description.
-3. Mention changes, motion progression, new objects, or shifts in scene.
-4. Be precise and structured.
-5. Do NOT hallucinate details that are not visible.
-
-IMP: USE Single Quote Only. No double quote as I am using that in variable
-
-Output:
-A clear, concise explanation of the current frame that logically connects with the previous one.
-"""
+    prompt = prompts.video_caption(idx, last_caption)
 
     payload = {
         "model": "google/gemini-2.5-flash-image",
@@ -84,7 +64,7 @@ def video_finder_agent(promptsDict):
         videos = [{"link": "https://www.youtube.com/shorts/P54z4Y2O8Go"}]
         for index, video in enumerate(videos):
             # !Download video
-            videoStartTime = time.time() # *******************
+            videoStartTime = time.time()  # *******************
             url = video['link']
             videoPathBaseName = f"{tmpDir}/{index}"
             videoPathFileName = f"{videoPathBaseName}.mp4"
@@ -96,8 +76,10 @@ def video_finder_agent(promptsDict):
             }
             yt_dlp.YoutubeDL(yt_dlp_opts).download(url)
 
-            videoDownloadedTime = time.time() # *******************
-            print(f"Video downloaded in {videoDownloadedTime-videoStartTime} sec") # *******************
+            videoDownloadedTime = time.time()  # *******************
+            # *******************
+            print(
+                f"Video downloaded in {videoDownloadedTime-videoStartTime} sec")
 
             # !Extract all infos from video like img, audio and everything and convert into text like transcribe, visual explain etc etc. (Save with timeline)
             # Video: capture and explain 1 frame per second of video
@@ -106,7 +88,7 @@ def video_finder_agent(promptsDict):
             idx = 0
             frame_count = 0
             captions = []
-            videoFrameTime = time.time() # *******************
+            videoFrameTime = time.time()  # *******************
             while True:
                 success, frame = cap.read()
                 if not success:
@@ -119,16 +101,22 @@ def video_finder_agent(promptsDict):
                     base64_str = f"data:image/png;base64,{b64_bytearr}"
 
                     last_caption = captions[-1] if len(captions) > 0 else ""
-                    exp = video_caption_generator(last_caption, idx, base64_str)
+                    exp = video_caption_generator(
+                        last_caption, idx, base64_str)
                     captions.append(exp)
-                    print(f"{idx} done in {time.time()-videoFrameTime}") # *******************
-                    videoFrameTime = time.time() # *******************
+                    # *******************
+                    print(f"{idx} done in {time.time()-videoFrameTime}")
+                    videoFrameTime = time.time()  # *******************
                     idx += 1
 
                 frame_count += 1
             cap.release()
-            print(f"Final all frames took {time.time()-videoDownloadedTime} sec") # *******************
-            print(f"Complete video(including download) took {time.time()-videoStartTime} sec") # *******************
+            # *******************
+            print(
+                f"Final all frames took {time.time()-videoDownloadedTime} sec")
+            # *******************
+            print(
+                f"Complete video(including download) took {time.time()-videoStartTime} sec")
             with open("a.json", "w") as f:
                 f.write(f"""{json.dumps(captions)}""")
 
