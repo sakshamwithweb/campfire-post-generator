@@ -43,3 +43,9 @@
 # frame_count=150
 # fps=30
 # print(frame_count%fps)
+
+# import time
+# start = time.time()
+# time.sleep(1)
+# end = time.time()
+# print(end-start)

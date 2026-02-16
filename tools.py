@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import base64
 import time
+import json
 
 
 def video_caption_generator(last_caption, idx, base64_str):
@@ -33,6 +34,8 @@ Instructions:
 4. Be precise and structured.
 5. Do NOT hallucinate details that are not visible.
 
+IMP: USE Single Quote Only. No double quote as I am using that in variable
+
 Output:
 A clear, concise explanation of the current frame that logically connects with the previous one.
 """
@@ -56,7 +59,8 @@ A clear, concise explanation of the current frame that logically connects with t
     response = requests.post(
         "https://ai.hackclub.com/proxy/v1/chat/completions",
         headers=headers,
-        json=payload
+        json=payload,
+        timeout=600
     )
 
     res = response.json()
@@ -77,9 +81,10 @@ A clear, concise explanation of the current frame that logically connects with t
 def video_finder_agent(promptsDict):
     # IN FUTURE YOU MAY WANNA DO SORT 'videos' WITH VECTOR SEARCH PROBABLITY
     with tempfile.TemporaryDirectory() as tmpDir:
-        videos = [{"link": "https://www.youtube.com/watch?v=HdnRIHhR5l8"}]
+        videos = [{"link": "https://www.youtube.com/shorts/P54z4Y2O8Go"}]
         for index, video in enumerate(videos):
             # !Download video
+            videoStartTime = time.time() # *******************
             url = video['link']
             videoPathBaseName = f"{tmpDir}/{index}"
             videoPathFileName = f"{videoPathBaseName}.mp4"
@@ -91,13 +96,17 @@ def video_finder_agent(promptsDict):
             }
             yt_dlp.YoutubeDL(yt_dlp_opts).download(url)
 
+            videoDownloadedTime = time.time() # *******************
+            print(f"Video downloaded in {videoDownloadedTime-videoStartTime} sec") # *******************
+
             # !Extract all infos from video like img, audio and everything and convert into text like transcribe, visual explain etc etc. (Save with timeline)
             # Video: capture and explain 1 frame per second of video
             cap = cv2.VideoCapture(videoPathFileName)
-            fps = cap.get(cv2.CAP_PROP_FPS)
+            fps = int(round(cap.get(cv2.CAP_PROP_FPS)))
             idx = 0
             frame_count = 0
             captions = []
+            videoFrameTime = time.time() # *******************
             while True:
                 success, frame = cap.read()
                 if not success:
@@ -110,18 +119,18 @@ def video_finder_agent(promptsDict):
                     base64_str = f"data:image/png;base64,{b64_bytearr}"
 
                     last_caption = captions[-1] if len(captions) > 0 else ""
-                    exp = video_caption_generator(
-                        last_caption, idx, base64_str)
+                    exp = video_caption_generator(last_caption, idx, base64_str)
                     captions.append(exp)
-                    print(f"{idx} done")
+                    print(f"{idx} done in {time.time()-videoFrameTime}") # *******************
+                    videoFrameTime = time.time() # *******************
                     idx += 1
 
                 frame_count += 1
             cap.release()
-            
-            print(captions)
-            # with open("a.json","w") as f:
-            #     f.write(captions)
+            print(f"Final all frames took {time.time()-videoDownloadedTime} sec") # *******************
+            print(f"Complete video(including download) took {time.time()-videoStartTime} sec") # *******************
+            with open("a.json", "w") as f:
+                f.write(f"""{json.dumps(captions)}""")
 
             # Audio: transcribe audio and tell
 
