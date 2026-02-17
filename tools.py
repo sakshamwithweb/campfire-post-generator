@@ -10,6 +10,7 @@ import base64
 import time
 import json
 import prompts
+import re
 
 
 def video_caption_generator(last_caption, idx, base64_str):
@@ -50,10 +51,7 @@ def video_caption_generator(last_caption, idx, base64_str):
 
 
 """
-    req = requests.get(
-        f"https://serpapi.com/search.json?engine=youtube&search_query=visisphere&api_key={os.getenv('SERPAPI_APIKEY')}")
-    youtube_results = req.json()
-    videos = youtube_results["video_results"]
+   
 """
 
 
@@ -134,3 +132,8 @@ def video_finder_agent(promptsDict):
 
 
 tools = [video_finder_agent]
+
+
+def format_json_str(txt):
+    newTxt = re.sub(" +", " ", txt.replace("\n", ""))
+    return newTxt

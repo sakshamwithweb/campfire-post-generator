@@ -2,19 +2,74 @@ from dotenv import load_dotenv
 from agent import init_agent
 from tools import tools
 import os
+import requests
+from tools import format_json_str
+import json
 
 # load stuff
 load_dotenv()
 
 # variables
 # video_api = os.getenv("MEMORIESAI_API")
-# idea = '''Winter Soldier vs. Cap fight scene. Caption: "When your bestie signs up for Campfire without telling you."'''
+idea = '''Winter Soldier vs. Cap fight scene. Caption: "When your bestie signs up for Campfire without telling you."'''
 
-agent = init_agent("You only do what is said", tools)
-
-response = agent.invoke(
-    {"messages": [{"role": "user", "content": "search doreamon video in which nobita asks for a robot but doreamon says he already have one but nobita asks several question like do you have weapons like him then doreamon open his pocket and get nuclear bomb"}]}
+# 1. Manager
+# One AI that looks at idea and tells us the video we want with query, sound we want or that pre existed one and any text or other things
+main_idea_req = requests.post(
+    os.getenv("HACKCLUB_AI_URL"),
+    headers={
+        "Authorization": f"Bearer {os.getenv('HACKCLUB_AI_API')}",
+        "Content-Type": "application/json"
+    },
+    json={
+        "model": "google/gemini-2.5-flash-lite-preview-09-2025",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text",
+                        "text": f"""I am hosting a game jam for teenagers and for promoting it, I am making reels. Here's today's idea: {idea}. Based strictly on this idea, generate a JSON object with the following structure:\n- "Video": A short, highly effective, and searchable YouTube query (not a sentence, not an explanation). It must be optimized so that when I search it on YouTube and check the top 5 results, I can easily find relevant clips.\n- "Description": A detailed explanation of the exact type of clip we are looking for. Clearly describe the visuals, environment, mood, actions, camera style, subjects, and any important elements so we can later match this description with the clip using vectors.\nReturn only one JSON object containing exactly these keys and their values.\nIMPORTANT: Your response must be strictly valid raw JSON only. Do NOT include any markdown, code blocks, backticks, explanations, comments, headings, or extra text before or after the JSON. Do NOT format it with labels or programming annotations. Output only the JSON object."""}
+                ]
+            }
+        ],
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                    "name": "gameJamReelFormat",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "Video": {
+                                "type": "string",
+                                "description": "A short, highly effective, and searchable YouTube query. Not a sentence or explanation. Optimized to find relevant clips within top 5 results."
+                            },
+                            "Description": {
+                                "type": "string",
+                                "description": "A detailed explanation of the exact clip required, including visuals, environment, mood, actions, camera style, subjects, and important elements for vector-based matching."
+                            }
+                        },
+                        "required": ["Video", "Description"],
+                        "additionalProperties": False
+                    }
+            }
+        }
+    }
 )
+main_idea = json.loads(format_json_str(main_idea_req.json()["choices"][0]["message"]["content"]))
 
-messages = response["messages"]
-print(messages[len(messages)-1].content)
+# Search the YT with the query and get top 5 videos
+yt_req = requests.get(f"https://serpapi.com/search.json?engine=youtube&search_query={main_idea['Video']}&api_key={os.getenv('SERPAPI_APIKEY')}")
+youtube_results = yt_req.json()
+yt_videos = youtube_results["video_results"]
+
+# Download Videos
+
+
+# Extract and store visual explanation and transcription of video
+
+# Search if the video has that clip, if yes go next or else repeat loop with next video
+
+# Find the time and extract that specific clip from video
+
+# 2. Audio
