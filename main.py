@@ -1,10 +1,11 @@
 from dotenv import load_dotenv
-from agent import init_agent
-from tools import tools
 import os
 import requests
-from tools import format_json_str
 import json
+import tempfile
+import cv2
+from tools import video_caption_generator, format_json_str, video_download
+import base64
 
 # load stuff
 load_dotenv()
@@ -12,7 +13,6 @@ load_dotenv()
 # variables
 # video_api = os.getenv("MEMORIESAI_API")
 idea = '''Winter Soldier vs. Cap fight scene. Caption: "When your bestie signs up for Campfire without telling you."'''
-
 # 1. Manager
 # One AI that looks at idea and tells us the video we want with query, sound we want or that pre existed one and any text or other things
 main_idea_req = requests.post(
@@ -61,12 +61,43 @@ main_idea = json.loads(format_json_str(main_idea_req.json()["choices"][0]["messa
 # Search the YT with the query and get top 5 videos
 yt_req = requests.get(f"https://serpapi.com/search.json?engine=youtube&search_query={main_idea['Video']}&api_key={os.getenv('SERPAPI_APIKEY')}")
 youtube_results = yt_req.json()
-yt_videos = youtube_results["video_results"]
+yt_videos = youtube_results["video_results"][:5]
 
 # Download Videos
-
+with tempfile.TemporaryDirectory() as tmpDir:
+    print(tmpDir)
+    for index, yt_video in enumerate(yt_videos):
+        videoPathBaseName, videoPathFileName = video_download(yt_video,tmpDir,index)
 
 # Extract and store visual explanation and transcription of video
+# A. Visual Explanations
+        cap = cv2.VideoCapture(videoPathFileName)
+        fps = int(round(cap.get(cv2.CAP_PROP_FPS)))
+        idx = 0
+        frame_count = 0
+        captions = []
+        while True:
+            success, frame = cap.read()
+            if not success:
+                break
+            if (frame_count % fps == 0):
+                encode_params = [int(cv2.IMWRITE_PNG_COMPRESSION), 9]
+                _, buffer = cv2.imencode('.png', frame, encode_params)
+                b64_bytearr = base64.b64encode(buffer).decode("utf-8")
+                base64_str = f"data:image/png;base64,{b64_bytearr}"
+
+                last_caption = captions[-1] if len(captions) > 0 else ""
+                exp = video_caption_generator(last_caption, idx, base64_str)
+                captions.append(exp)
+                print(f"{idx} done")
+                idx += 1
+            frame_count += 1
+        cap.release()
+        with open(f"captions/caption{index}.json", "w") as f:
+            f.write(f"""{json.dumps(captions)}""")
+
+# B. Transcription of video
+        # print("here")
 
 # Search if the video has that clip, if yes go next or else repeat loop with next video
 
