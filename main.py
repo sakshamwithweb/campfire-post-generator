@@ -71,6 +71,7 @@ with tempfile.TemporaryDirectory() as tmpDir:
     for index, yt_video in enumerate(yt_videos):
         videoPathBaseName, videoPathFileName = video_download(yt_video,tmpDir,index)
 
+# 2. Video
 # Extract and store visual explanation and transcription of video
 # A. Visual Explanations
         cap = cv2.VideoCapture(videoPathFileName)
@@ -128,7 +129,9 @@ with tempfile.TemporaryDirectory() as tmpDir:
             chunks = req.json()["output"]["chunks"]
 
 # Search if the video has that clip, if yes go next or else repeat loop with next video
+# OPTION I: LLM
+
 
 # Find the time and extract that specific clip from video
 
-# 2. Audio
+# 3. Audio
