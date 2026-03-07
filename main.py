@@ -6,6 +6,8 @@ import tempfile
 import cv2
 from tools import video_caption_generator, format_json_str, video_download
 import base64
+from ffmpeg import FFmpeg
+import time
 
 # load stuff
 load_dotenv()
@@ -97,7 +99,33 @@ with tempfile.TemporaryDirectory() as tmpDir:
             f.write(f"""{json.dumps(captions)}""")
 
 # B. Transcription of video
-        # print("here")
+        # Convert mp4 to mp3
+        audioPathName = f"{tmpDir}/{index}.mp3"
+        ffmpeg = FFmpeg().option("y").input(videoPathFileName).output(audioPathName)
+        ffmpeg.execute()
+
+        with open(audioPathName, 'rb') as binary_file:
+            binary_file_data = binary_file.read()
+            base64_encoded_data = base64.b64encode(binary_file_data)
+            base64_output = base64_encoded_data.decode('utf-8')
+
+            audio = f"data:audio/mpeg;base64,{base64_output}"
+            model = "vaibhavs10/incredibly-fast-whisper:3ab86df6c8f54c11309d4d1f930ac292bad43ace52d10c80d87eb258b3c9f79c"
+            url = f"https://ai.hackclub.com/proxy/v1/replicate/models/{model}/predictions"
+            headers = {
+                "Authorization": f"Bearer {os.getenv('HACKCLUB_AI_API')}",
+                "Content-Type": "application/json",
+                "Prefer": "wait"
+            }
+            data = {
+                "input": {
+                    "task": "transcribe",
+                    "audio": audio,
+                    "return_timestamps": True
+                }
+            }
+            req = requests.post(url, headers=headers, json=data)
+            chunks = req.json()["output"]["chunks"]
 
 # Search if the video has that clip, if yes go next or else repeat loop with next video
 
