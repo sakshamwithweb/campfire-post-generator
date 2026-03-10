@@ -4,10 +4,11 @@ import requests
 import json
 import tempfile
 import cv2
-from tools import video_caption_generator, format_json_str, video_download
+from tools import video_caption_generator, format_json_str, video_download, select_correct_video
 import base64
 from ffmpeg import FFmpeg
 import time
+from operator import itemgetter
 
 # load stuff
 load_dotenv()
@@ -135,66 +136,8 @@ with tempfile.TemporaryDirectory() as tmpDir:
 
 # Search if the video has that clip, if yes go next or else repeat loop with next video
 # # OPTION I: LLM: get of all vids then ask to AI
-# print("_____________________________________________________")
-with open("output.json", "w") as f:
-    json.dump(videos_infos, f, indent=2)
-target_sentence = main_idea['Description']
-print(target_sentence)
-headers = {
-    "Authorization": f"Bearer {os.getenv('HACKCLUB_AI_API')}",
-    "Content-Type": "application/json"
-}
-payload = {
-    "model": "x-ai/grok-4.1-fast",
-    "messages": [
-        {
-            "role": "user",
-            "content": f"""
-You are given analysis of 3 videos. Each video contains:
-- frame-by-frame visual descriptions
-- transcription
+[video_index, start_second, end_second] = select_correct_video(main_idea['Description'], videos_infos)
 
-Task:
-Determine which video best matches the following sentence and identify the exact time range where the match occurs.
-
-Sentence:
-{target_sentence}
-
-Video Data:
-{json.dumps(videos_infos, indent=2)}
-
-Instructions:
-1. Compare the sentence with BOTH the transcription and visual descriptions.
-2. Determine which video matches the sentence most closely.
-3. Identify the approximate start and end time (in seconds).
-4. Use only evidence present in the provided data.
-5. If no video matches, return video_index = null.
-"""
-        }
-    ],
-    "response_format": {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "video_analyzing",
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "video_index": {"type": "string", "description": "Starts from 0"},
-                    "start_second": {"type": "integer"},
-                    "end_second": {"type": "integer"},
-                    "confidence": {"type": "integer", "description": "Between 0 and 1"},
-                    "reason": {"type": "string", "description": "short explanation"}
-                },
-                "required": ["video_index", "start_second", "end_second"]
-            }
-        }
-    }
-}
-
-ask_to_llm = requests.post(
-    os.getenv("HACKCLUB_AI_URL"), headers=headers, json=payload)
-print(ask_to_llm.json(),ask_to_llm.json().keys())
-
-# Find the time and extract that specific clip from video
+# here get the video now
 
 # 3. Audio
