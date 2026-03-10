@@ -1,4 +1,3 @@
-
 def video_caption(idx, last_caption):
     return f"""
 You are analyzing a video at 1 frame per second.
@@ -17,8 +16,10 @@ Instructions:
 4. Be precise and structured.
 5. Do NOT hallucinate details that are not visible.
 
-IMP: USE Single Quote Only. No double quote as I am using that in variable
+Strict Formatting Rule:
+- The output MUST NOT contain any double quote characters.
+- If quotation is needed, use single quotes only.
 
 Output:
-A clear, concise explanation of the current frame that logically connects with the previous one.
-    """
+Return only the frame description.
+"""

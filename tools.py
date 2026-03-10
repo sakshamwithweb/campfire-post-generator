@@ -26,41 +26,41 @@ def video_download(yt_video, tmpDir, index):
 
 
 def video_caption_generator(last_caption, idx, base64_str):
-    headers = {
-        "Authorization": f"Bearer {os.getenv('HACKCLUB_AI_API')}",
-        "Content-Type": "application/json"
-    }
+    try:
+        headers = {
+            "Authorization": f"Bearer {os.getenv('HACKCLUB_AI_API')}",
+            "Content-Type": "application/json"
+        }
 
-    prompt = prompts.video_caption(idx, last_caption)
+        prompt = prompts.video_caption(idx, last_caption)
 
-    payload = {
-        "model": "google/gemini-2.5-flash-image",
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": base64_str}
-                    }
-                ]
-            }
-        ]
-    }
+        payload = {
+            "model": "google/gemini-2.5-flash-image",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": base64_str}
+                        }
+                    ]
+                }
+            ]
+        }
 
-    response = requests.post(
-        os.getenv("HACKCLUB_AI_URL"),
-        headers=headers,
-        json=payload,
-        timeout=600
-    )
-
-    res = response.json()
-    result = res["choices"][0]["message"]["content"]
-
-    return result
-
+        response = requests.post(
+            os.getenv("HACKCLUB_AI_URL"),
+            headers=headers,
+            json=payload,
+            timeout=1200
+        )
+        res = response.json()
+        result = res["choices"][0]["message"]["content"]
+        return result
+    except:
+        return video_caption_generator(last_caption, idx, base64_str)
 
 def format_json_str(txt):
     newTxt = re.sub(" +", " ", txt.replace("\n", ""))

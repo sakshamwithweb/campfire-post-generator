@@ -58,18 +58,22 @@ main_idea_req = requests.post(
         }
     }
 )
-main_idea = json.loads(format_json_str(main_idea_req.json()["choices"][0]["message"]["content"]))
+main_idea = json.loads(format_json_str(main_idea_req.json()[
+                       "choices"][0]["message"]["content"]))
 
-# Search the YT with the query and get top 5 videos
-yt_req = requests.get(f"https://serpapi.com/search.json?engine=youtube&search_query={main_idea['Video']}&api_key={os.getenv('SERPAPI_APIKEY')}")
+# Search the YT with the query and get top 5 videos (for now 3)
+yt_req = requests.get(
+    f"https://serpapi.com/search.json?engine=youtube&search_query={main_idea['Video']}&api_key={os.getenv('SERPAPI_APIKEY')}")
 youtube_results = yt_req.json()
-yt_videos = youtube_results["video_results"][:5]
+yt_videos = youtube_results["video_results"][:3]
 
 # Download Videos
+videos_infos = []
 with tempfile.TemporaryDirectory() as tmpDir:
     print(tmpDir)
     for index, yt_video in enumerate(yt_videos):
-        videoPathBaseName, videoPathFileName = video_download(yt_video,tmpDir,index)
+        videoPathBaseName, videoPathFileName = video_download(
+            yt_video, tmpDir, index)
 
 # 2. Video
 # Extract and store visual explanation and transcription of video
@@ -96,8 +100,6 @@ with tempfile.TemporaryDirectory() as tmpDir:
                 idx += 1
             frame_count += 1
         cap.release()
-        with open(f"captions/caption{index}.json", "w") as f:
-            f.write(f"""{json.dumps(captions)}""")
 
 # B. Transcription of video
         # Convert mp4 to mp3
@@ -128,9 +130,70 @@ with tempfile.TemporaryDirectory() as tmpDir:
             req = requests.post(url, headers=headers, json=data)
             chunks = req.json()["output"]["chunks"]
 
-# Search if the video has that clip, if yes go next or else repeat loop with next video
-# OPTION I: LLM
+        videos_infos.append(
+            {"visual": captions, "transcription": chunks})
 
+# Search if the video has that clip, if yes go next or else repeat loop with next video
+# # OPTION I: LLM: get of all vids then ask to AI
+# print("_____________________________________________________")
+with open("output.json", "w") as f:
+    json.dump(videos_infos, f, indent=2)
+target_sentence = main_idea['Description']
+print(target_sentence)
+headers = {
+    "Authorization": f"Bearer {os.getenv('HACKCLUB_AI_API')}",
+    "Content-Type": "application/json"
+}
+payload = {
+    "model": "x-ai/grok-4.1-fast",
+    "messages": [
+        {
+            "role": "user",
+            "content": f"""
+You are given analysis of 3 videos. Each video contains:
+- frame-by-frame visual descriptions
+- transcription
+
+Task:
+Determine which video best matches the following sentence and identify the exact time range where the match occurs.
+
+Sentence:
+{target_sentence}
+
+Video Data:
+{json.dumps(videos_infos, indent=2)}
+
+Instructions:
+1. Compare the sentence with BOTH the transcription and visual descriptions.
+2. Determine which video matches the sentence most closely.
+3. Identify the approximate start and end time (in seconds).
+4. Use only evidence present in the provided data.
+5. If no video matches, return video_index = null.
+"""
+        }
+    ],
+    "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "video_analyzing",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "video_index": {"type": "string", "description": "Starts from 0"},
+                    "start_second": {"type": "integer"},
+                    "end_second": {"type": "integer"},
+                    "confidence": {"type": "integer", "description": "Between 0 and 1"},
+                    "reason": {"type": "string", "description": "short explanation"}
+                },
+                "required": ["video_index", "start_second", "end_second"]
+            }
+        }
+    }
+}
+
+ask_to_llm = requests.post(
+    os.getenv("HACKCLUB_AI_URL"), headers=headers, json=payload)
+print(ask_to_llm.json(),ask_to_llm.json().keys())
 
 # Find the time and extract that specific clip from video
 

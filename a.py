@@ -113,3 +113,25 @@
 # from ffmpeg import FFmpeg
 # ffmpeg = FFmpeg().option("y").input("sample.mp4").output("sample.mp3")
 # ffmpeg.execute()
+
+
+# import os
+# import requests
+# from dotenv import load_dotenv
+# load_dotenv()
+# headers = {
+#     "Authorization": f"Bearer {os.getenv('HACKCLUB_AI_API')}",
+#     "Content-Type": "application/json"
+# }
+# payload = {
+#     "model": "x-ai/grok-4.1-fast",
+#     "messages": [
+#         {
+#             "role": "user",
+#             "content": "dont you know elon changed his mission from mars to moon lol"
+#         }
+#     ]
+# }
+# ask_to_llm = requests.post(
+#     os.getenv("HACKCLUB_AI_URL"), headers=headers, json=payload)
+# print(ask_to_llm.json()["choices"][0]["message"]["content"])
