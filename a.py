@@ -150,3 +150,8 @@
 #     return [a, b, c]
 # [a, b, c] = a()
 # print(a, b, c)
+
+# from moviepy.editor import *
+# clip = VideoFileClip("sample.mp4")
+# clip = clip.subclip(0,2)
+# clip.write_videofile("a.mp4")

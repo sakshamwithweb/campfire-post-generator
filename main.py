@@ -9,6 +9,7 @@ import base64
 from ffmpeg import FFmpeg
 import time
 from operator import itemgetter
+from moviepy.editor import *
 
 # load stuff
 load_dotenv()
@@ -136,8 +137,15 @@ with tempfile.TemporaryDirectory() as tmpDir:
 
 # Search if the video has that clip, if yes go next or else repeat loop with next video
 # # OPTION I: LLM: get of all vids then ask to AI
-[video_index, start_second, end_second] = select_correct_video(main_idea['Description'], videos_infos)
+    [video_index, start_second, end_second] = select_correct_video(
+        main_idea['Description'], videos_infos)
 
 # here get the video now
 
+    clip = VideoFileClip(f"{tmpDir}/{video_index}.mp4")
+    clip = clip.subclip(start_second, end_second)
+    # clip.write_videofile(f"{tmpDir}/main.mp4")
+    clip.write_videofile("main.mp4")
+
 # 3. Audio
+
