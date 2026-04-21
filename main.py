@@ -7,7 +7,6 @@ import cv2
 from tools import video_caption_generator, format_json_str, video_download, select_correct_video
 import base64
 from ffmpeg import FFmpeg
-import time
 from operator import itemgetter
 from moviepy.editor import *
 
@@ -60,8 +59,7 @@ main_idea_req = requests.post(
         }
     }
 )
-main_idea = json.loads(format_json_str(main_idea_req.json()[
-                       "choices"][0]["message"]["content"]))
+main_idea = json.loads(format_json_str(main_idea_req.json()["choices"][0]["message"]["content"]))
 
 # Search the YT with the query and get top 5 videos (for now 3)
 yt_req = requests.get(
@@ -69,6 +67,7 @@ yt_req = requests.get(
 youtube_results = yt_req.json()
 yt_videos = youtube_results["video_results"][:3]
 
+print(yt_videos)
 # Download Videos
 videos_infos = []
 with tempfile.TemporaryDirectory() as tmpDir:
@@ -133,6 +132,7 @@ with tempfile.TemporaryDirectory() as tmpDir:
             chunks = req.json()["output"]["chunks"]
 
         videos_infos.append(
+# 3. Audio
             {"visual": captions, "transcription": chunks})
 
 # Search if the video has that clip, if yes go next or else repeat loop with next video
@@ -144,8 +144,11 @@ with tempfile.TemporaryDirectory() as tmpDir:
 
     clip = VideoFileClip(f"{tmpDir}/{video_index}.mp4")
     clip = clip.subclip(start_second, end_second)
-    # clip.write_videofile(f"{tmpDir}/main.mp4")
-    clip.write_videofile("main.mp4")
+    clip.write_videofile(f"{tmpDir}/main.mp4")
 
 # 3. Audio
+# Idts we need any audio thing here so lets just skip it and keep video default audio
 
+
+# 4. Attaching media and other
+# So here we have to attach anything we wanna attach in video and at what keyframes.

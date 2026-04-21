@@ -1,0 +1,2 @@
+So currently we are doing it in a very expensive way, both time and money: Finding and downloading top 3 videos, running all expensive tests to just find out correct video then trim.
+Current problems: Too expensive & Not trusted(just top 3)
